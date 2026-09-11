@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RollDex — BJJ Technique Library</title>
+<meta name="description" content="A simple video library of Brazilian Jiu-Jitsu techniques, organized by position.">
+<meta name="theme-color" content="#12151A">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RollDex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12151A;
+    --surface:#1B2027;
+    --surface-2:#232933;
+    --border:#2E3540;
+    --text:#EDEFF2;
+    --text-muted:#8E97A3;
+    --gold:#C6A15B;
+    --gold-dim:#8f7440;
+    --sub:#C1503F;
+    --sweep:#3E7CB1;
+    --escape:#4C9A6A;
+    --pass:#B98A34;
+    --takedown:#8B6FB0;
+    --radius:10px;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    overscroll-behavior-y:contain;
+  }
+  h1,h2,h3,.display{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    letter-spacing:0.01em;
+    margin:0;
+  }
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;}
+  ::selection{background:var(--gold);color:#12151A;}
+
+  /* keyboard focus visibility for our div-as-link elements and native controls */
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  .pos-card:focus-visible,.tech-card:focus-visible,.related-card:focus-visible,
+  .back-row:focus-visible,.brand:focus-visible{
+    outline:2px solid var(--gold);outline-offset:2px;border-radius:8px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition-duration:0.001ms !important;}
+  }
+
+  /* mat texture backdrop */
+  .mat-texture{
+    position:fixed;inset:0;z-index:-1;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(198,161,91,0.05), transparent 40%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 14px);
+  }
+
+  #app{max-width:560px;margin:0 auto;min-height:100vh;padding-bottom:calc(24px + var(--safe-bottom));}
+
+  /* header */
+  header.top{
+    position:sticky;top:0;z-index:20;
+    background:rgba(18,21,26,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+    padding:calc(14px + var(--safe-top)) 18px 14px;
+  }
+  .brand-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .brand{display:flex;align-items:center;gap:9px;cursor:pointer;}
+  .brand-mark{
+    width:30px;height:30px;border-radius:7px;
+    background:linear-gradient(155deg, var(--gold), var(--gold-dim));
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .brand-mark svg{width:17px;height:17px;}
+  .brand h1{font-size:19px;color:var(--text);}
+  .brand-sub{font-size:10.5px;color:var(--text-muted);letter-spacing:0.06em;margin-top:1px;}
+
+  .search-wrap{position:relative;}
+  .search-wrap input{
+    width:100%;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:15px;
+    padding:11px 14px 11px 38px;
+    border-radius:10px;
+    outline:none;
+    font-family:'Inter',sans-serif;
+  }
+  .search-wrap input::placeholder{color:var(--text-muted);}
+  .search-wrap input:focus{border-color:var(--gold-dim);}
+  .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;}
+  .search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);font-size:18px;padding:4px;cursor:pointer;line-height:1;}
+
+  main{padding:16px 18px 40px;}
+
+  /* section headings */
+  .section-title{font-size:13px;text-transform:uppercase;letter-spacing:0.09em;color:var(--text-muted);margin:22px 0 10px;font-weight:600;}
+  .section-title:first-child{margin-top:2px;}
+
+  /* position grid */
+  .pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .pos-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 14px 13px;
+    display:flex;flex-direction:column;gap:8px;
+    cursor:pointer;
+    transition:border-color .15s ease, transform .1s ease;
+    min-height:88px;
+    justify-content:space-between;
+  }
+  .pos-card:active{transform:scale(0.97);}
+  .pos-card:hover{border-color:var(--gold-dim);}
+  .pos-icon{width:22px;height:22px;color:var(--gold);}
+  .pos-name{font-family:'Oswald',sans-serif;font-size:15.5px;font-weight:500;color:var(--text);line-height:1.15;}
+  .pos-count{font-size:11.5px;color:var(--text-muted);}
+
+  /* technique list */
+  .tech-list{display:flex;flex-direction:column;gap:8px;}
+  .tech-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:12px 13px;
+    display:flex;align-items:center;gap:12px;
+    cursor:pointer;
+  }
+  .tech-card:active{transform:scale(0.985);}
+  .tech-thumb{
+    width:52px;height:52px;border-radius:8px;flex-shrink:0;
+    background:var(--surface-2);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .tech-thumb img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
+  .tech-thumb .play{position:relative;z-index:1;width:16px;height:16px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));}
+  .tech-thumb::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,0.18);}
+  .drilled-badge{
+    position:absolute;top:4px;right:4px;z-index:2;
+    width:16px;height:16px;border-radius:50%;
+    background:var(--escape);color:#0d1a12;
+    display:flex;align-items:center;justify-content:center;
+    padding:3px;box-sizing:content-box;
+  }
+  .drilled-badge svg{width:100%;height:100%;}
+  .tech-body{flex:1;min-width:0;}
+  .tech-title{font-size:14.5px;font-weight:600;color:var(--text);line-height:1.25;margin-bottom:4px;}
+  .tech-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .tag{
+    font-size:10.5px;font-weight:600;letter-spacing:0.03em;
+    padding:2.5px 7px;border-radius:5px;
+    display:inline-block;
+  }
+  .tag-sub{background:rgba(193,80,63,0.16);color:#e07a68;}
+  .tag-sweep{background:rgba(62,124,177,0.16);color:#78b0e0;}
+  .tag-escape{background:rgba(76,154,106,0.16);color:#7ecb98;}
+  .tag-pass{background:rgba(185,138,52,0.16);color:#e0b866;}
+  .tag-takedown{background:rgba(139,111,176,0.16);color:#c1a9e0;}
+  .tech-pos{font-size:11.5px;color:var(--text-muted);}
+
+  .empty-state{text-align:center;padding:50px 20px;color:var(--text-muted);}
+  .empty-state svg{width:38px;height:38px;margin-bottom:12px;opacity:0.5;}
+  .empty-state p{font-size:14px;line-height:1.5;}
+
+  /* back row */
+  .back-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;color:var(--text-muted);font-size:13.5px;font-weight:500;}
+  .back-row svg{width:15px;height:15px;}
+  .back-row:active{opacity:0.6;}
+
+  .page-title{font-size:23px;margin-bottom:2px;}
+  .page-sub{font-size:12.5px;color:var(--text-muted);margin-bottom:16px;}
+
+  /* video detail */
+  .video-wrap{
+    position:relative;width:100%;aspect-ratio:16/9;
+    background:#000;border-radius:12px;overflow:hidden;
+    margin-bottom:16px;border:1px solid var(--border);
+  }
+  .video-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+
+  .detail-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .detail-title{font-size:22px;line-height:1.2;margin-bottom:6px;}
+  .detail-source{font-size:13px;color:var(--text-muted);margin-bottom:16px;}
+  .detail-source b{color:var(--text);font-weight:600;}
+  .drill-toggle{
+    display:inline-flex;align-items:center;gap:7px;
+    background:var(--surface);border:1px solid var(--border);color:var(--text-muted);
+    font-size:13px;font-weight:600;padding:8px 14px;border-radius:20px;
+    cursor:pointer;margin-bottom:18px;font-family:'Inter',sans-serif;
+  }
+  .drill-toggle svg{width:15px;height:15px;flex-shrink:0;}
+  .drill-toggle.is-drilled{background:rgba(76,154,106,0.14);border-color:rgba(76,154,106,0.4);color:#7ecb98;}
+  .drill-toggle:active{transform:scale(0.97);}
+  .detail-desc{font-size:14.5px;line-height:1.6;color:#c7cdd4;margin-bottom:22px;}
+
+  .related-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin:0 -18px;padding-left:18px;padding-right:18px;scroll-snap-type:x proximity;}
+  .related-row::-webkit-scrollbar{display:none;}
+  .related-card{
+    flex:0 0 auto;width:168px;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:11px;cursor:pointer;scroll-snap-align:start;
+  }
+  .related-card .tech-title{font-size:13px;margin-bottom:6px;}
+  .related-card .tech-pos{font-size:11px;}
+
+  /* bottom nav */
+  nav.bottom{
+    position:sticky;bottom:0;z-index:20;
+    background:rgba(18,21,26,0.94);
+    backdrop-filter:blur(10px);
+    border-top:1px solid var(--border);
+    display:flex;
+    padding-bottom:var(--safe-bottom);
+  }
+  nav.bottom button{
+    flex:1;background:none;border:none;color:var(--text-muted);
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:9px 4px 8px;cursor:pointer;font-size:10.5px;font-weight:600;
+    letter-spacing:0.02em;
+  }
+  nav.bottom button svg{width:20px;height:20px;}
+  nav.bottom button.active{color:var(--gold);}
+
+  #app{padding-bottom:0;}
+  main{min-height:calc(100vh - 180px);}
+
+  @media (min-width:420px){
+    .related-card{width:180px;}
+  }
+</style>
+</head>
+<body>
+<div class="mat-texture"></div>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   ROLLDEX — BJJ Technique Video Library
+   Vanilla JS, hash-routed SPA. No build step, no dependencies.
+   ============================================================ */
+
+// ---------- Data: positions ----------
+const POSITIONS = [
+  { id:'standing',     name:'Standing',       icon:'stand' },
+  { id:'closed-guard',  name:'Closed Guard',   icon:'guard' },
+  { id:'half-guard',    name:'Half Guard',     icon:'half' },
+  { id:'butterfly',     name:'Butterfly Guard',icon:'butterfly' },
+  { id:'open-guard',    name:'Open Guard',     icon:'open' },
+  { id:'mount',         name:'Mount',          icon:'mount' },
+  { id:'knee-on-belly', name:'Knee-on-Belly',  icon:'kneebelly' },
+  { id:'side-control',  name:'Side Control',   icon:'side' },
+  { id:'north-south',   name:'North-South',    icon:'northsouth' },
+  { id:'back-control',  name:'Back Control',   icon:'back' },
+  { id:'turtle',        name:'Turtle',         icon:'turtle' },
+  { id:'passing',       name:'Guard Passing',  icon:'pass' },
+  { id:'leg-lock',      name:'Leg Entanglement', icon:'leg' },
+  { id:'self-defense',  name:'Self-Defense',   icon:'shield' },
+];
+
+// ---------- Data: techniques ----------
+// youtube = YouTube video ID. category drives the colored tag.
+const TECHNIQUES = [
+  {
+    id:'armbar-closed-guard', title:'Armbar from Closed Guard', position:'closed-guard',
+    category:'submission', instructor:'Lachlan Giles', youtube:'GCN0zvbMuqU',
+    desc:'The classic straight armlock from the bottom of closed guard. Break your opponent\u2019s posture, swing a leg over the shoulder, and control the wrist as you extend your hips to finish. One of the first submissions every white belt learns \u2014 and one of the highest-percentage attacks at every belt level.',
+    related:['triangle-closed-guard','scissor-sweep']
+  },
+  {
+    id:'triangle-closed-guard', title:'Triangle Choke from Closed Guard', position:'closed-guard',
+    category:'submission', instructor:'Chewjitsu', youtube:'9pjdpFCr4UI',
+    desc:'A figure-four leg choke that traps one arm and the neck between your thighs. Works in gi or no-gi and shares its entry with the armbar \u2014 if the arm comes free, you\u2019re already halfway to a triangle.',
+    related:['armbar-closed-guard','scissor-sweep']
+  },
+  {
+    id:'scissor-sweep', title:'Scissor Sweep', position:'closed-guard',
+    category:'sweep', instructor:'BJJ Fundamentals', youtube:'29Qq4kLjgH0',
+    desc:'An old-school closed guard sweep that off-balances your opponent using a scissoring leg motion while you control a collar and sleeve. A foundational way to get from the bottom to the top without a submission.',
+    related:['armbar-closed-guard','hip-bump-sweep']
+  },
+  {
+    id:'hip-bump-sweep', title:'Hip Bump Sweep', position:'closed-guard',
+    category:'sweep', instructor:'Jiu-Jitsu Fundamentals', youtube:'42tl59plPBo',
+    desc:'One of the highest-percentage sweeps in all of grappling: sit up, drive your shoulder into an opponent\u2019s armpit, and bump their base out from under them. Simple enough for a first class, and still useful at black belt.',
+    related:['scissor-sweep','armbar-closed-guard']
+  },
+  {
+    id:'armbar-mount', title:'Armbar from Mount', position:'mount',
+    category:'submission', instructor:'Lachlan Giles', youtube:'QwQRDEydJCM',
+    desc:'From full mount, isolate an arm, swing your leg over the head, and drop into the armbar position with your hips controlling the shoulder. A staple top-position finish once you\u2019ve secured mount.',
+    related:['ezekiel-mount','upa-escape']
+  },
+  {
+    id:'ezekiel-mount', title:'Ezekiel Choke from Mount', position:'mount',
+    category:'submission', instructor:'Jordan Teaches Jiu-Jitsu', youtube:'KVnengZD1XA',
+    desc:'A sneaky sleeve choke applied from mount using your own gi sleeve (or fist, no-gi) across the collar. Fast to set up and hard to see coming, especially against opponents focused on defending their arms.',
+    related:['armbar-mount','upa-escape']
+  },
+  {
+    id:'upa-escape', title:'Upa (Bridge & Roll) Mount Escape', position:'mount',
+    category:'escape', instructor:'Grapplearts', youtube:'01Fe3N1vZMY',
+    desc:'The first mount escape every beginner learns, and one that still works at black belt. Trap an arm and a leg on the same side, bridge explosively, and roll your opponent into your closed guard.',
+    related:['armbar-mount','ezekiel-mount','shrimp-escape']
+  },
+  {
+    id:'technical-mount', title:'Technical Mount to S-Mount', position:'mount',
+    category:'submission', instructor:'Jason Quek', youtube:'4gtS8tKwuag',
+    desc:'A transition that shifts your weight off an opponent\u2019s hips and onto their chest, making mount far harder to escape and setting up the armbar family of attacks. S-mount is the more extreme, higher-pressure version of the same idea.',
+    related:['armbar-mount','cross-collar-choke-mount']
+  },
+  {
+    id:'cross-collar-choke-mount', title:'Cross Collar Choke from Mount', position:'mount',
+    category:'submission', instructor:'Roger Gracie', youtube:'8wLWTw8G0c0',
+    desc:'A gi choke taught by the man widely regarded as its greatest practitioner \u2014 Roger Gracie submitted a huge share of his opponents with this exact technique. Sink one hand deep into the far collar, then cross-grip the near collar to finish.',
+    related:['technical-mount','ezekiel-mount']
+  },
+  {
+    id:'knee-on-belly-armbar', title:'Armbar from Knee-on-Belly', position:'knee-on-belly',
+    category:'submission', instructor:'Rafael \u201cFormiga\u201d Barbosa', youtube:'qAdqq_piwSM',
+    desc:'When an opponent pushes your knee off their stomach to escape knee-on-belly, that same pushing motion straightens their arm right into an armbar. A classic example of turning an opponent\u2019s defense into your offense.',
+    related:['knee-on-belly-control','armbar-mount']
+  },
+  {
+    id:'knee-on-belly-control', title:'Knee-on-Belly \u2014 Maintaining Position', position:'knee-on-belly',
+    category:'pass', instructor:'Gustavo Gasperin', youtube:'m1wVnwzqjW4',
+    desc:'Knee-on-belly is a mobile but unstable pin, and most beginners lose it within seconds of arriving. This covers how to distribute your weight and switch your knee to keep the position \u2014 and how to flow into mount or back control from it.',
+    related:['knee-on-belly-armbar','stack-pass']
+  },
+  {
+    id:'kimura-side-control', title:'Kimura from Side Control', position:'side-control',
+    category:'submission', instructor:'John Danaher', youtube:'p-6lmaseoGI',
+    desc:'A powerful shoulder lock applied with a figure-four grip on the far wrist while pinning from side control. Extremely versatile \u2014 it also works as a sweep, a back-take, and a control position in its own right.',
+    related:['americana-side-control','darce-side-control','shrimp-escape']
+  },
+  {
+    id:'americana-side-control', title:'Americana from Side Control', position:'side-control',
+    category:'submission', instructor:'BJJ Basics', youtube:'ThRkj0FHySs',
+    desc:'A figure-four shoulder lock that works in the opposite direction to the kimura, pinning the wrist near the head and cranking the arm into a keylock. One of the very first submissions taught in most BJJ curricula.',
+    related:['kimura-side-control','shrimp-escape']
+  },
+  {
+    id:'shrimp-escape', title:'Shrimp Escape to Guard', position:'side-control',
+    category:'escape', instructor:'Procel BJJ', youtube:'ZzOqifoQ_TM',
+    desc:'The fundamental hip-escape movement used to create space from side control and rebuild your closed guard. Frame against the hip and shoulder, shrimp your hips away, and slide a knee back in between you and your opponent.',
+    related:['kimura-side-control','upa-escape']
+  },
+  {
+    id:'rear-naked-choke', title:'Rear Naked Choke', position:'back-control',
+    category:'submission', instructor:'Clark Gracie', youtube:'jDaq6Fu1vGc',
+    desc:'The blood choke applied from back control \u2014 widely considered the single most reliable submission in all of grappling. Seatbelt grip, hooks in, choking arm deep under the chin, and squeeze your elbows together.',
+    related:['back-escape','clock-choke','bow-arrow-choke']
+  },
+  {
+    id:'seatbelt-control-back', title:'Seatbelt Control \u2014 Maintaining Back Control', position:'back-control',
+    category:'pass', instructor:'Marcelo Garcia', youtube:'j6CeXnresG0',
+    desc:'The single most important control in back control, taught by one of the sport\u2019s greatest back-control specialists. Get this grip right and hooks or a body triangle become optional; get it wrong and even good hooks won\u2019t save you.',
+    related:['rear-naked-choke','back-escape']
+  },
+  {
+    id:'back-escape', title:'Escaping Back Control', position:'back-control',
+    category:'escape', instructor:'Knight Jiu-Jitsu', youtube:'V_U1IHL2iGQ',
+    desc:'A complete walkthrough of surviving and escaping the worst position in jiu-jitsu. Defend the choke first, flatten your hips to the mat, then work your way back to guard.',
+    related:['rear-naked-choke','shrimp-escape']
+  },
+  {
+    id:'old-school-sweep', title:'Old School Sweep', position:'half-guard',
+    category:'sweep', instructor:'Roberto \u201cGordo\u201d Correa', youtube:'-S1lhWAX2ps',
+    desc:'The original half guard sweep, taught by the man who popularized the position. Underhook deep, off-balance your opponent onto their far knee, and drive through to the top.',
+    related:['scissor-sweep','kimura-half-guard-bottom','deep-half-guard-sweep']
+  },
+  {
+    id:'kimura-half-guard-bottom', title:'Kimura from Bottom Half Guard', position:'half-guard',
+    category:'submission', instructor:'Evolve Fight Team', youtube:'5F3ZM01oPVo',
+    desc:'An attacking option from the bottom of half guard, using a scissored knee to create space before locking the figure-four grip. Turns a defensive position into an immediate submission threat.',
+    related:['old-school-sweep','kimura-side-control']
+  },
+  {
+    id:'deep-half-guard-sweep', title:'Deep Half Guard Sweep', position:'half-guard',
+    category:'sweep', instructor:'Pedigo Submission Fighting', youtube:'YY63uL4ceyw',
+    desc:'A sweep from underneath your opponent\u2019s hips rather than beside them, using their own leg to elevate them off balance. A great option once you\u2019ve been stacked flat and can\u2019t get the standard half guard underhook.',
+    related:['old-school-sweep','knee-cut-pass']
+  },
+  {
+    id:'z-guard-knee-shield', title:'Z-Guard (Knee Shield)', position:'half-guard',
+    category:'sweep', instructor:'Gustavo Gasperin', youtube:'q_ND-09HiWg',
+    desc:'A defensive-first half guard variant that uses your top knee as a shield against your opponent\u2019s chest, keeping you safe from smashing pressure while you look for a sweep or an underhook. Often the first half guard style taught because it prioritizes not getting crushed.',
+    related:['old-school-sweep','deep-half-guard-sweep']
+  },
+  {
+    id:'butterfly-hook-sweep', title:'Hook Sweep from Butterfly Guard', position:'butterfly',
+    category:'sweep', instructor:'Jeff Joslin', youtube:'xYLRhiYJegg',
+    desc:'A high-percentage sweep using your butterfly hook to lift and off-balance an opponent who is sitting close. Works especially well against opponents who like to smother your guard.',
+    related:['butterfly-shoulder-crunch','butterfly-arm-drag-back']
+  },
+  {
+    id:'butterfly-arm-drag-back', title:'Arm Drag to Back Take from Butterfly Guard', position:'butterfly',
+    category:'sweep', instructor:'Caio Terra', youtube:'nH_6XoYUx6o',
+    desc:'Instead of sweeping to the top, this option drags an opponent\u2019s arm across their body to circle directly to their back \u2014 arguably the best-value attack in butterfly guard, made famous by Marcelo Garcia.',
+    related:['butterfly-hook-sweep','rear-naked-choke']
+  },
+  {
+    id:'butterfly-shoulder-crunch', title:'Butterfly Guard \u2014 Shoulder Crunch Sweep', position:'butterfly',
+    category:'sweep', instructor:'Revolution BJJ', youtube:'qB6iVnvZ9B0',
+    desc:'A sweep that isolates an opponent\u2019s posted arm and crunches their shoulder toward the mat while your hook elevates their leg. Made famous by Gordon Ryan\u2019s ADCC finishes, but simple enough for any level.',
+    related:['butterfly-hook-sweep','butterfly-arm-drag-back']
+  },
+  {
+    id:'clock-choke', title:'Clock Choke from Turtle', position:'turtle',
+    category:'submission', instructor:'Evolve University', youtube:'ihQnprnIHBs',
+    desc:'A collar choke applied while your opponent is turtled up, using a stepping motion around their head that resembles the hands of a clock. A great way to finish someone who is stalling instead of turning to their back.',
+    related:['turtle-back-take','turtle-recover-guard']
+  },
+  {
+    id:'turtle-recover-guard', title:'Recovering Guard from Turtle', position:'turtle',
+    category:'escape', instructor:'Lachlan Giles', youtube:'61unSJ7vu4I',
+    desc:'A rolling escape that turns the turtle position from a dead end into a route back to your own guard. Timing matters here \u2014 done too early or too late, you hand your opponent an easy back take instead.',
+    related:['turtle-back-take','shrimp-escape']
+  },
+  {
+    id:'turtle-back-take', title:'Back Take from Turtle', position:'turtle',
+    category:'takedown', instructor:'Evolve MMA', youtube:'6ns9XP2BsjQ',
+    desc:'The other side of the turtle equation \u2014 rather than letting an opponent recover guard or stall, this shows how to secure a seatbelt grip and hooks to take the back directly from on top of turtle.',
+    related:['clock-choke','rear-naked-choke']
+  },
+  {
+    id:'peruvian-necktie', title:'Peruvian Necktie from Turtle', position:'turtle',
+    category:'submission', instructor:'Jean Jacques Machado', youtube:'Xeb-RCFwmCQ',
+    desc:'An unusual-looking front headlock choke, taught by the black belt most associated with inventing it. Trap an arm across your body and lock your legs around it and the neck \u2014 a great finish when an opponent turtles to avoid giving up their back.',
+    related:['clock-choke','turtle-back-take']
+  },
+  {
+    id:'double-leg-takedown', title:'Double Leg Takedown', position:'standing',
+    category:'takedown', instructor:'Lachlan Giles', youtube:'4DHzLvLd-0Y',
+    desc:'A wrestling staple and one of the most reliable ways to bring a fight to the ground. Change levels, drive through both of your opponent\u2019s legs, and finish by turning the corner.',
+    related:['single-leg-takedown','knee-cut-pass']
+  },
+  {
+    id:'knee-cut-pass', title:'Knee Cut Pass', position:'passing',
+    category:'pass', instructor:'BJJ Complete Guide', youtube:'lOPh9K5kOcE',
+    desc:'One of the most foundational guard passes in jiu-jitsu \u2014 and still one of the highest-percentage passes even at black belt. Pin a leg with your shin, secure the underhook, and slide your knee through to side control.',
+    related:['toreando-pass','stack-pass','straight-ankle-lock']
+  },
+  {
+    id:'straight-ankle-lock', title:'Straight Ankle Lock', position:'leg-lock',
+    category:'submission', instructor:'Chewjitsu', youtube:'5ZAqUQpsus8',
+    desc:'The first leg lock most people learn, targeting the Achilles tendon from a leg entanglement. Get a deep bite on the foot with your forearm, fall to your side, and extend your hips.',
+    related:['knee-cut-pass','kneebar','heel-hook-inside']
+  },
+  {
+    id:'guillotine-closed-guard', title:'Guillotine Choke from Closed Guard', position:'closed-guard',
+    category:'submission', instructor:'Chewjitsu', youtube:'TvsIJlaBCsw',
+    desc:'A front headlock choke you can catch when an opponent postures up or shoots for a takedown into your guard. Trap the head and an arm, lock your hands under the chin, and squeeze while pulling up with your guard.',
+    related:['omoplata-closed-guard','triangle-closed-guard']
+  },
+  {
+    id:'omoplata-closed-guard', title:'Omoplata from Closed Guard', position:'closed-guard',
+    category:'submission', instructor:'BJJ for Breakfast', youtube:'UKiR0blIL_4',
+    desc:'A shoulder lock that traps the arm with your legs instead of your arms, freeing your hands to deal with defenses. A great option when an opponent defends the armbar by pulling their trapped arm out and past your hip.',
+    related:['guillotine-closed-guard','armbar-closed-guard']
+  },
+  {
+    id:'darce-side-control', title:'D\u2019Arce Choke from Side Control', position:'side-control',
+    category:'submission', instructor:'Breylor Grout', youtube:'AWKzMDUfJtc',
+    desc:'An arm-in choke you thread across the neck and under the far arm while on top of side control. Especially useful against opponents who frame hard and try to push you away, since that framing arm is exactly what you choke with.',
+    related:['kimura-side-control','north-south-choke']
+  },
+  {
+    id:'north-south-choke', title:'North-South Choke', position:'north-south',
+    category:'submission', instructor:'Nathan Leverton', youtube:'sPpSEiyuzJY',
+    desc:'A blood choke applied while facing your opponent\u2019s legs from the north-south position, sliding your shoulder across their throat. A sneaky finish that also punishes opponents who push on your head to create space.',
+    related:['darce-side-control','kimura-north-south']
+  },
+  {
+    id:'kimura-north-south', title:'Kimura from North-South', position:'north-south',
+    category:'submission', instructor:'BJJ instructional', youtube:'VGJ88g6aqxA',
+    desc:'Often the very first attack to look for once you\u2019ve settled into north-south, using the position\u2019s natural pressure to lock the figure-four grip before your opponent can frame. Flows directly into a back take or the north-south choke if they defend.',
+    related:['north-south-choke','north-south-escape']
+  },
+  {
+    id:'north-south-escape', title:'Escaping North-South', position:'north-south',
+    category:'escape', instructor:'Stephan Kesting', youtube:'fY2GTuMOsnI',
+    desc:'A position-specific escape that changes depending on where your opponent\u2019s hands are \u2014 under your head, over your arms, or on the mat. Turning your head and stepping your legs over to recover half guard is the common thread across all three variations.',
+    related:['kimura-north-south','north-south-choke']
+  },
+  {
+    id:'bow-arrow-choke', title:'Bow and Arrow Choke', position:'back-control',
+    category:'submission', instructor:'Evolve University', youtube:'xqNhZVNhxnE',
+    desc:'One of the most powerful finishes from back control, using a deep collar grip and a trapped leg to bend your opponent like a drawn bow. Extremely tight once locked in \u2014 and doesn\u2019t rely on hooks, so it works even if your opponent strips one.',
+    related:['rear-naked-choke','back-escape']
+  },
+  {
+    id:'toreando-pass', title:'Toreando (Bullfighter) Pass', position:'passing',
+    category:'pass', instructor:'Vanguard Gym', youtube:'gkk_FYrm7ig',
+    desc:'A standing guard pass named for its resemblance to a matador sweeping a cape aside. Grip the pants at the ankles or knees, redirect both legs to one side, and step through before your opponent can recover.',
+    related:['knee-cut-pass','stack-pass']
+  },
+  {
+    id:'stack-pass', title:'Stack Pass', position:'passing',
+    category:'pass', instructor:'CVBJJ Online', youtube:'MXrr8maoO7U',
+    desc:'A pressure pass that folds your opponent\u2019s own legs over their head, taking away their ability to frame or recover guard. One of the very first passes taught against closed guard, and still effective at every level.',
+    related:['toreando-pass','over-under-pass']
+  },
+  {
+    id:'leg-drag-pass', title:'Leg Drag Pass', position:'passing',
+    category:'pass', instructor:'InFighting BJJ', youtube:'eH2rZYwSuk8',
+    desc:'A modern standing pass that drags one of an opponent\u2019s legs across your body, pinning their hips at a bad angle before you settle into side control. Popularized by competitors like the Mendes brothers and now taught at every level.',
+    related:['toreando-pass','over-under-pass']
+  },
+  {
+    id:'over-under-pass', title:'Over-Under Pass', position:'passing',
+    category:'pass', instructor:'Ritchie Yip', youtube:'so2f48pDuEY',
+    desc:'A grinding pressure pass that traps one leg over your shoulder and the other under your arm, pinning an opponent\u2019s hips so they can\u2019t frame or recover guard. Slow and patient rather than fast, but very hard to stop once it\u2019s locked in.',
+    related:['stack-pass','leg-drag-pass']
+  },
+  {
+    id:'single-leg-takedown', title:'Single Leg Takedown', position:'standing',
+    category:'takedown', instructor:'Michael Trasso', youtube:'2u0ZKAbxp6w',
+    desc:'A wrestling takedown that isolates one leg instead of shooting for both, making it useful at longer range or against a sprawling opponent. Finish by running the pipe or dumping your opponent to the side.',
+    related:['double-leg-takedown','arm-drag-takedown']
+  },
+  {
+    id:'arm-drag-takedown', title:'Arm Drag to the Back', position:'standing',
+    category:'takedown', instructor:'Giancarlo Bodoni', youtube:'_uJeSFxjquM',
+    desc:'A wrestling staple that pulls an opponent\u2019s arm across their body to expose their back, all from standing. Minimal setup required \u2014 if you see an arm reach out, the drag is available.',
+    related:['single-leg-takedown','rear-naked-choke']
+  },
+  {
+    id:'guard-pull', title:'Pulling Guard', position:'standing',
+    category:'takedown', instructor:'BJJ for Beginners', youtube:'JDJYWBbzspQ',
+    desc:'A safe way to bring the fight to the ground on your own terms instead of engaging in a takedown exchange. Secure grips first, then sit through to closed guard while keeping your opponent close so they can\u2019t posture up.',
+    related:['double-leg-takedown','scissor-sweep']
+  },
+  {
+    id:'ankle-pick-takedown', title:'Ankle Pick Takedown', position:'standing',
+    category:'takedown', instructor:'TeachMeGrappling', youtube:'i_oK1AqUAGw',
+    desc:'A wrestling takedown that scores off a grip fight rather than a big shot, making it a lower-risk option than the double or single leg. Grab behind the ankle as you off-balance your opponent forward, and finish by driving through the leg you\u2019ve captured.',
+    related:['single-leg-takedown','double-leg-takedown']
+  },
+  {
+    id:'kneebar', title:'Kneebar', position:'leg-lock',
+    category:'submission', instructor:'Submission-focused instructional', youtube:'oBlMI4iKm3c',
+    desc:'A straight leg lock that hyperextends the knee, mechanically similar to an armbar but applied to the leg. Trap the foot in your armpit, control the shin with both hands, and extend your hips slowly and with control.',
+    related:['straight-ankle-lock','toe-hold']
+  },
+  {
+    id:'toe-hold', title:'Toe Hold', position:'leg-lock',
+    category:'submission', instructor:'MMA Lessons', youtube:'Wtf4B7ri3R4',
+    desc:'Sometimes called the kimura of the foot \u2014 a figure-four grip on the foot that twists the ankle inward instead of attacking it in a straight line. A useful second option when an opponent defends the straight ankle lock by pointing their toes.',
+    related:['kneebar','straight-ankle-lock']
+  },
+  {
+    id:'headlock-escape', title:'Standing Headlock Escape', position:'self-defense',
+    category:'escape', instructor:'Gustavo Gasperin', youtube:'uRXdQnAEQ_s',
+    desc:'What to do when someone grabs your head from the side while standing \u2014 a common street altercation grab that has nothing to do with sport grappling rules. Three options are shown, all built around protecting your neck first and off-balancing second.',
+    related:['bear-hug-escape','guard-pull']
+  },
+  {
+    id:'bear-hug-escape', title:'Rear Bear Hug Escape', position:'self-defense',
+    category:'escape', instructor:'Philipe Della Monica', youtube:'UkofgDcwaH0',
+    desc:'How to create space and take the fight to the ground on your terms when someone grabs you from behind and lifts or squeezes. Drop your base immediately, then use hip movement and a takedown \u2014 shown here finishing in a single leg \u2014 rather than trying to out-muscle the grip.',
+    related:['headlock-escape','single-leg-takedown']
+  },
+  {
+    id:'heel-hook-inside', title:'Inside Heel Hook (50/50 Fundamentals)', position:'leg-lock',
+    category:'submission', instructor:'Bellingham BJJ', youtube:'yEpy0pQPn-M',
+    desc:'One of the most powerful submissions in grappling, applied from the 50/50 position by rotating the heel rather than bending a joint. Because it can injure a training partner very quickly, drill the mechanics slowly before ever applying it with speed.',
+    related:['straight-ankle-lock','kneebar']
+  },
+  {
+    id:'de-la-riva-sweep', title:'De La Riva Guard \u2014 Basic Sweeps', position:'open-guard',
+    category:'sweep', instructor:'Beginner BJJ series', youtube:'ZBLTVlH3Rb0',
+    desc:'An angled open guard where you hook an opponent\u2019s far leg from the outside, opening up a family of sweeps and back takes. These two beginner-friendly sweeps are the standard entry point into the position.',
+    related:['berimbolo','spider-guard-sweep']
+  },
+  {
+    id:'spider-guard-sweep', title:'Spider Guard \u2014 Kite Sweep', position:'open-guard',
+    category:'sweep', instructor:'Grapplearts', youtube:'Kh94zd7K1CI',
+    desc:'A gi-based open guard that controls both sleeves while your feet post on your opponent\u2019s biceps. The kite sweep is the first sweep most instructors teach from spider guard \u2014 fast, powerful, and simple to time.',
+    related:['de-la-riva-sweep','x-guard-sweep']
+  },
+  {
+    id:'x-guard-sweep', title:'X-Guard \u2014 Technical Stand-Up Sweep', position:'open-guard',
+    category:'sweep', instructor:'Darragh O\u2019Conaill', youtube:'8JMowLHg3Ws',
+    desc:'A guard played from underneath and between an opponent\u2019s legs, using your hooks to off-balance them the moment they try to stand. Extremely effective against opponents who stand up to pass.',
+    related:['spider-guard-sweep','de-la-riva-sweep']
+  },
+  {
+    id:'berimbolo', title:'Berimbolo', position:'open-guard',
+    category:'sweep', instructor:'Stephan Kesting', youtube:'A6rFk8pUCIc',
+    desc:'A modern De La Riva back-take that uses an inverted roll to circle underneath your opponent and climb to their back. Technical and unusual-looking, but built from the same De La Riva hook you already use to sweep.',
+    related:['de-la-riva-sweep','rear-naked-choke']
+  },
+  {
+    id:'reverse-de-la-riva', title:'Reverse De La Riva Guard', position:'open-guard',
+    category:'sweep', instructor:'Stephan Kesting & Ostap Manastyrski', youtube:'lj985a5UJl0',
+    desc:'The mirror image of De La Riva guard, hooking the near leg from the inside instead of the outside \u2014 particularly useful for shutting down the knee-cut pass. Also shown here: the transition back to regular De La Riva and a back-take called the Kiss of the Dragon.',
+    related:['de-la-riva-sweep','berimbolo']
+  },
+];
+
+const TECH_BY_ID = Object.fromEntries(TECHNIQUES.map(t => [t.id, t]));
+const CAT_LABEL = { submission:'Submission', sweep:'Sweep', escape:'Escape', pass:'Pass', takedown:'Takedown' };
+const CAT_CLASS = { submission:'tag-sub', sweep:'tag-sweep', escape:'tag-escape', pass:'tag-pass', takedown:'tag-takedown' };
+
+function posName(id){ const p = POSITIONS.find(p=>p.id===id); return p ? p.name : id; }
+function techCount(posId){ return TECHNIQUES.filter(t=>t.position===posId).length; }
+
+// ---------- Recently viewed (local to this device only) ----------
+const RECENT_KEY = 'rolldex:recent';
+function getRecentIds(){
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e){ return []; }
+}
+function addRecent(id){
+  try {
+    let ids = getRecentIds().filter(x => x !== id);
+    ids.unshift(id);
+    ids = ids.slice(0, 8);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(ids));
+  } catch(e){ /* storage unavailable — fail silently */ }
+}
+function getRecentTechniques(){
+  return getRecentIds().map(id => TECH_BY_ID[id]).filter(Boolean);
+}
+
+// ---------- Drilled tracker (local to this device only) ----------
+const DRILLED_KEY = 'rolldex:drilled';
+function getDrilledIds(){
+  try {
+    const raw = localStorage.getItem(DRILLED_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e){ return []; }
+}
+function isDrilled(id){ return getDrilledIds().includes(id); }
+function toggleDrilled(id){
+  try {
+    let ids = getDrilledIds();
+    if(ids.includes(id)) ids = ids.filter(x => x !== id);
+    else ids.push(id);
+    localStorage.setItem(DRILLED_KEY, JSON.stringify(ids));
+  } catch(e){ /* storage unavailable — fail silently */ }
+  render();
+}
+
+// ---------- Icons (inline SVG, stroke-based, minimal) ----------
+const ICONS = {
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  find: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  logo: '<svg viewBox="0 0 24 24" fill="none" stroke="#12151A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="3.2"/><path d="M4 21c1-4.5 4-7 8-7s7 2.5 8 7"/></svg>',
+  empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  // position glyphs, kept simple/geometric
+  stand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6M12 13l-4 7M12 13l4 7M8 10h8"/></svg>',
+  guard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="2"/><path d="M12 8v5"/><path d="M6 20c1-4 3-6 3-9M18 20c-1-4-3-6-3-9"/><path d="M9 11l6 0"/></svg>',
+  half:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="2"/><path d="M9 8v6M9 14l-3 6M9 14l4 4"/><path d="M17 12a4 4 0 100 8" /></svg>',
+  butterfly:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="2"/><path d="M12 8v6"/><path d="M12 14c-3 0-5 2-5 5M12 14c3 0 5 2 5 5"/></svg>',
+  mount:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="18" rx="7" ry="2.4"/><circle cx="12" cy="9" r="2"/><path d="M12 11v5"/></svg>',
+  side:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="17" rx="8" ry="2"/><circle cx="7" cy="12" r="2"/><path d="M9 13l10 3"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="2"/><path d="M12 8v6M9 20l3-6 3 6M8 12l8 0"/></svg>',
+  turtle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="13" rx="7" ry="5"/><circle cx="12" cy="6.5" r="2"/><path d="M12 8.5v3"/></svg>',
+  pass:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h16"/><path d="M17 9l3 3-3 3"/></svg>',
+  leg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="6" r="2"/><path d="M7 8v6l6 4"/><path d="M13 18h6M17 15l3 3-3 3"/></svg>',
+  open:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.5" r="2"/><path d="M12 7.5v5"/><path d="M6 20c2-5 2-8 6-8.5M18 20c-2-5-2-8-6-8.5"/><path d="M6 20l-1.5-2M18 20l1.5-2"/></svg>',
+  northsouth:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="18" r="2"/><circle cx="17" cy="6" r="2"/><path d="M9 17l6-10"/></svg>',
+  kneebelly:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="18" rx="8" ry="2"/><circle cx="8" cy="10" r="2"/><path d="M8 12v3l4-3.5"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  circle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/></svg>',
+};
+function icon(name){ return ICONS[name] || ''; }
+
+// ---------- Router ----------
+function parseHash(){
+  const h = location.hash.replace(/^#\/?/, '');
+  const parts = h.split('/').filter(Boolean);
+  if(parts.length === 0) return { view:'home' };
+  if(parts[0] === 'position' && parts[1]) return { view:'position', id:parts[1] };
+  if(parts[0] === 'technique' && parts[1]) return { view:'technique', id:parts[1] };
+  if(parts[0] === 'search') return { view:'search', q: decodeURIComponent(parts[1]||'') };
+  if(parts[0] === 'positions') return { view:'positions' };
+  return { view:'home' };
+}
+function navigate(hash){ location.hash = hash; }
+// Common attributes for a <div> that behaves like a link: keyboard-focusable,
+// activates on Enter/Space, and is announced correctly by screen readers.
+function navAttrs(path){
+  const safe = path.replace(/'/g, "\\'");
+  return `role="link" tabindex="0" onclick="navigate('${safe}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('${safe}');}"`;
+}
+
+// ---------- Rendering ----------
+const app = document.getElementById('app');
+let searchQuery = '';
+
+function render(){
+  const route = parseHash();
+  const activeTab = route.view === 'positions' ? 'positions' : (route.view === 'search' ? 'search' : 'home');
+  app.innerHTML = `
+    <header class="top">
+      <div class="brand-row">
+        <div class="brand" ${navAttrs('/')}>
+          <div class="brand-mark">${icon('logo')}</div>
+          <div>
+            <h1>RollDex</h1>
+            <div class="brand-sub">BJJ TECHNIQUE LIBRARY</div>
+          </div>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">${icon('search')}</span>
+        <input id="search-input" type="search" inputmode="search" placeholder="Search techniques or positions\u2026"
+          value="${escapeAttr(searchQuery)}" autocomplete="off" />
+        ${searchQuery ? `<button class="search-clear" onclick="clearSearch()">\u2715</button>` : ''}
+      </div>
+    </header>
+    <main id="main-content"></main>
+    <nav class="bottom">
+      <button class="${activeTab==='home'?'active':''}" onclick="navigate('/')">
+        ${icon('home')}<span>Home</span>
+      </button>
+      <button class="${activeTab==='positions'?'active':''}" onclick="navigate('/positions')">
+        ${icon('grid')}<span>Positions</span>
+      </button>
+      <button class="${activeTab==='search'?'active':''}" onclick="document.getElementById('search-input').focus()">
+        ${icon('find')}<span>Search</span>
+      </button>
+    </nav>
+  `;
+
+  const input = document.getElementById('search-input');
+  input.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    if(searchQuery.trim()){
+      navigate('/search/' + encodeURIComponent(searchQuery));
+    } else if(parseHash().view === 'search'){
+      navigate('/');
+    }
+  });
+
+  const main = document.getElementById('main-content');
+  if(route.view === 'home') main.innerHTML = renderHome();
+  else if(route.view === 'positions') main.innerHTML = renderPositions();
+  else if(route.view === 'position') main.innerHTML = renderPosition(route.id);
+  else if(route.view === 'technique') main.innerHTML = renderTechnique(route.id);
+  else if(route.view === 'search') main.innerHTML = renderSearch(route.q);
+  else main.innerHTML = renderHome();
+
+  window.scrollTo(0,0);
+  if(route.view === 'search' && document.activeElement !== input){
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+}
+
+function clearSearch(){ searchQuery=''; navigate('/'); }
+
+function renderHome(){
+  const recent = getRecentTechniques();
+  const featured = TECHNIQUES.slice(0, 6);
+  return `
+    <div class="section-title">Browse by position</div>
+    ${positionGrid(POSITIONS.slice(0,6))}
+    <div style="margin-top:10px;">
+      <button onclick="navigate('/positions')" style="background:none;border:1px solid var(--border);color:var(--text-muted);
+        width:100%;padding:11px;border-radius:10px;font-size:13px;cursor:pointer;">
+        View all ${POSITIONS.length} positions
+      </button>
+    </div>
+    ${recent.length ? `
+      <div class="section-title">Continue watching</div>
+      <div class="tech-list">
+        ${recent.map(techCard).join('')}
+      </div>
+    ` : `
+      <div class="section-title">Featured techniques</div>
+      <div class="tech-list">
+        ${featured.map(techCard).join('')}
+      </div>
+    `}
+  `;
+}
+
+function renderPositions(){
+  return `
+    <div class="section-title">All positions</div>
+    ${positionGrid(POSITIONS)}
+  `;
+}
+
+function positionGrid(list){
+  return `<div class="pos-grid">${list.map(p => `
+    <div class="pos-card" ${navAttrs('/position/'+p.id)}>
+      <div class="pos-icon">${icon(p.icon)}</div>
+      <div>
+        <div class="pos-name">${p.name}</div>
+        <div class="pos-count">${techCount(p.id)} technique${techCount(p.id)===1?'':'s'}</div>
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderPosition(posId){
+  const list = TECHNIQUES.filter(t => t.position === posId);
+  const name = posName(posId);
+  return `
+    <div class="back-row" ${navAttrs('/positions')}>${icon('chevronLeft')} Positions</div>
+    <h2 class="page-title">${name}</h2>
+    <div class="page-sub">${list.length} technique${list.length===1?'':'s'}</div>
+    <div class="tech-list">
+      ${list.length ? list.map(techCard).join('') : emptyState('No techniques here yet.')}
+    </div>
+  `;
+}
+
+function renderSearch(q){
+  searchQuery = q;
+  const query = q.trim().toLowerCase();
+  const results = query ? TECHNIQUES.filter(t =>
+    t.title.toLowerCase().includes(query) ||
+    posName(t.position).toLowerCase().includes(query) ||
+    t.category.toLowerCase().includes(query) ||
+    t.instructor.toLowerCase().includes(query)
+  ) : [];
+  return `
+    <div class="page-sub" style="margin-top:2px;">${results.length} result${results.length===1?'':'s'} for \u201c${escapeHtml(q)}\u201d</div>
+    <div class="tech-list">
+      ${results.length ? results.map(techCard).join('') : emptyState('No techniques match that search. Try a position name like \u201cmount\u201d, or a submission like \u201carmbar\u201d.')}
+    </div>
+  `;
+}
+
+function renderTechnique(id){
+  const t = TECH_BY_ID[id];
+  if(!t) return emptyState('Technique not found.');
+  addRecent(id);
+  const drilled = isDrilled(id);
+  const related = (t.related||[]).map(rid => TECH_BY_ID[rid]).filter(Boolean);
+  return `
+    <div class="back-row" ${navAttrs('/position/'+t.position)}>${icon('chevronLeft')} ${posName(t.position)}</div>
+    <div class="video-wrap">
+      <iframe src="https://www.youtube-nocookie.com/embed/${t.youtube}?rel=0&modestbranding=1"
+        title="${escapeAttr(t.title)}" loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen></iframe>
+    </div>
+    <div class="detail-tags">
+      <span class="tag ${CAT_CLASS[t.category]}">${CAT_LABEL[t.category]}</span>
+      <span class="tag" style="background:var(--surface-2);color:var(--text-muted);">${posName(t.position)}</span>
+    </div>
+    <h2 class="detail-title">${t.title}</h2>
+    <div class="detail-source">Taught by <b>${t.instructor}</b> \u00b7 via YouTube</div>
+    <button class="drill-toggle ${drilled?'is-drilled':''}" onclick="toggleDrilled('${t.id}')">
+      ${drilled ? icon('check') + ' Drilled' : icon('circle') + ' Mark as drilled'}
+    </button>
+    <p class="detail-desc">${t.desc}</p>
+    ${related.length ? `
+      <div class="section-title" style="margin-top:0;">Related techniques</div>
+      <div class="related-row">
+        ${related.map(r => `
+          <div class="related-card" ${navAttrs('/technique/'+r.id)}>
+            <span class="tag ${CAT_CLASS[r.category]}" style="margin-bottom:7px;display:inline-block;">${CAT_LABEL[r.category]}</span>
+            <div class="tech-title">${r.title}</div>
+            <div class="tech-pos">${posName(r.position)}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+  `;
+}
+
+function techCard(t){
+  const drilled = isDrilled(t.id);
+  return `
+    <div class="tech-card" ${navAttrs('/technique/'+t.id)}>
+      <div class="tech-thumb">
+        <img loading="lazy" src="https://i.ytimg.com/vi/${t.youtube}/mqdefault.jpg" alt="" onerror="this.style.display='none'"/>
+        <span class="play">${icon('play')}</span>
+        ${drilled ? `<span class="drilled-badge">${icon('check')}</span>` : ''}
+      </div>
+      <div class="tech-body">
+        <div class="tech-title">${t.title}</div>
+        <div class="tech-meta">
+          <span class="tag ${CAT_CLASS[t.category]}">${CAT_LABEL[t.category]}</span>
+          <span class="tech-pos">${posName(t.position)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function emptyState(msg){
+  return `<div class="empty-state">${icon('empty')}<p>${msg}</p></div>`;
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+// ---------- Boot ----------
+window.addEventListener('hashchange', render);
+window.navigate = navigate;
+window.clearSearch = clearSearch;
+window.toggleDrilled = toggleDrilled;
+render();
+
+// ---------- PWA: service worker ----------
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
