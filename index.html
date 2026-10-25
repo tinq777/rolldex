@@ -227,6 +227,18 @@
   .related-card .tech-pos{font-size:11px;}
 
   /* bottom nav */
+  #update-toast{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(76px + var(--safe-bottom));z-index:50;
+    display:flex;align-items:center;gap:14px;
+    background:var(--surface-2);border:1px solid var(--gold-dim);color:var(--text);
+    padding:10px 10px 10px 16px;border-radius:12px;font-size:13.5px;font-weight:500;
+    box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:calc(100vw - 32px);
+  }
+  #update-toast button{
+    background:var(--gold);color:#12151A;border:0;border-radius:8px;
+    font-weight:700;font-size:13px;padding:7px 14px;cursor:pointer;font-family:inherit;
+  }
   nav.bottom{
     position:sticky;bottom:0;z-index:20;
     background:rgba(18,21,26,0.94);
@@ -1099,9 +1111,41 @@ window.toggleDrilled = toggleDrilled;
 render();
 
 // ---------- PWA: service worker ----------
+function showUpdateToast(reg){
+  if(document.getElementById('update-toast')) return;
+  const t = document.createElement('div');
+  t.id = 'update-toast';
+  t.setAttribute('role','status');
+  t.innerHTML = '<span>New version available</span><button type="button">Refresh</button>';
+  t.querySelector('button').addEventListener('click', () => {
+    if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
+    else location.reload();
+  });
+  document.body.appendChild(t);
+}
 if('serviceWorker' in navigator){
+  const hadController = !!navigator.serviceWorker.controller;
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      if(reg.waiting && hadController) showUpdateToast(reg);
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange', () => {
+          if(nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateToast(reg);
+        });
+      });
+      // Re-check for a new deploy whenever the app comes back to the foreground.
+      document.addEventListener('visibilitychange', () => {
+        if(document.visibilityState === 'visible') reg.update().catch(()=>{});
+      });
+    }).catch(()=>{});
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if(reloading || !hadController) return;
+      reloading = true;
+      location.reload();
+    });
   });
 }
 </script>

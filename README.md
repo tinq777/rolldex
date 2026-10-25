@@ -75,3 +75,8 @@ Condensed Oswald for headings (athletic/poster feel), Inter for body text.
 ## Tested
 Verified with Playwright (mobile viewport) end-to-end: home → positions → position
 detail → technique detail → related-technique navigation → search. No console errors.
+
+## Update toast
+When a new version is deployed, installed users see a "New version available — Refresh"
+toast. Tapping Refresh activates the new service worker and reloads. The toast only fires
+when `sw.js` changes, so keep bumping the `CACHE` constant on every content change.

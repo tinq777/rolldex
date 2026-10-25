@@ -1,4 +1,4 @@
-const CACHE = 'rolldex-v3';
+const CACHE = 'rolldex-v4';
 const SHELL = [
   './',
   './index.html',
@@ -8,8 +8,17 @@ const SHELL = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+    // Bypass the HTTP cache so a new version really is a new version.
+    // No skipWaiting() here: the page shows an "update available" toast and
+    // tells us to activate when the user taps Refresh.
+    caches.open(CACHE).then((cache) =>
+      cache.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))
+    )
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
