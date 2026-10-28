@@ -2,7 +2,7 @@
   "name": "RollDex — BJJ Technique Library",
   "short_name": "RollDex",
   "description": "A simple video library of Brazilian Jiu-Jitsu techniques, organized by position.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#12151A",

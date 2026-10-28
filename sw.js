@@ -1,18 +1,25 @@
-const CACHE = 'rolldex-v8';
-const SHELL = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon.svg',
-];
+const CACHE = 'rolldex-v9';
+const SHELL = ['./', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
+
+// Hosts like Cloudflare Pages redirect /index.html to /. Browsers (Safari especially)
+// refuse to open a page when a service worker answers a navigation with a redirected
+// response, which leaves an installed app that will not launch. Always store and serve
+// a clean copy instead.
+function clean(res){
+  if(!res || !res.redirected) return res;
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: res.headers });
+}
 
 self.addEventListener('install', (event) => {
+  // Activate right away so a build that cannot launch is replaced on the next open.
+  self.skipWaiting();
   event.waitUntil(
-    // Bypass the HTTP cache so a new version really is a new version.
-    // No skipWaiting() here: the page shows an "update available" toast and
-    // tells us to activate when the user taps Refresh.
     caches.open(CACHE).then((cache) =>
-      cache.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))
+      Promise.all(SHELL.map((u) =>
+        fetch(new Request(u, { cache: 'reload' }))
+          .then((res) => (res && res.ok ? cache.put(u, clean(res)) : null))
+          .catch(() => null)
+      ))
     )
   );
 });
@@ -29,25 +36,24 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// App-shell files: cache-first. Everything else (YouTube, thumbnails, fonts): network-first,
-// falling back to cache if offline. Never intercept cross-origin video/embeds beyond caching.
+// Same-origin: cached copy first, refreshed in the background. Page loads always map to './'.
+// Cross-origin (YouTube, thumbnails) is left alone.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
+  if(req.method !== 'GET') return;
   const url = new URL(req.url);
+  if(url.origin !== self.location.origin) return;
 
-  if (url.origin === self.location.origin) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        const fetchPromise = fetch(req).then((res) => {
-          if (res && res.status === 200) {
-            const clone = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, clone));
-          }
-          return res;
-        }).catch(() => cached);
-        return cached || fetchPromise;
-      })
-    );
-  }
-  // cross-origin requests (YouTube thumbnails/embeds, fonts) pass straight through
+  const key = req.mode === 'navigate' ? './' : req;
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    const cached = await cache.match(key, { ignoreSearch: true });
+    const network = fetch(req.mode === 'navigate' ? './' : req).then((res) => {
+      if(res && res.ok){ cache.put(key, clean(res.clone())).catch(() => {}); }
+      return clean(res);
+    });
+    if(cached) { network.catch(() => {}); return cached; }
+    try { return await network; }
+    catch(e){ return (await cache.match('./')) || Response.error(); }
+  })());
 });
