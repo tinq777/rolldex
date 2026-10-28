@@ -80,3 +80,6 @@ detail → technique detail → related-technique navigation → search. No cons
 When a new version is deployed, installed users see a "New version available — Refresh"
 toast. Tapping Refresh activates the new service worker and reloads. The toast only fires
 when `sw.js` changes, so keep bumping the `CACHE` constant on every content change.
+
+## Matches tab
+A fourth tab, **Matches**, lists high-level competition videos (ADCC, Craig Jones Invitational, EBI and classic matches) with an athlete filter: Gordon Ryan, Craig Jones, Kade Ruotolo, Mica Galvão, Giancarlo Bodoni, Nicholas Meregali, Nicky Rodriguez, Marcelo Garcia and the women's division. Data lives in the `MATCHES` array in `index.html` (id, who, title, event, kind, youtube, desc). Routes: `#/matches/:athlete`, `#/match/:id`. Each match page has an "Open on YouTube" fallback link in case an uploader blocks embedding. Athlete names and event names also work in search.

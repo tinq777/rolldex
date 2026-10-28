@@ -239,6 +239,19 @@
     background:var(--gold);color:#12151A;border:0;border-radius:8px;
     font-weight:700;font-size:13px;padding:7px 14px;cursor:pointer;font-family:inherit;
   }
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);
+    border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .chip.active{background:var(--gold);color:#12151A;border-color:var(--gold);}
+  .chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  .yt-link{display:inline-block;margin:4px 0 14px;color:var(--gold);font-size:13px;font-weight:600;text-decoration:none;}
+  .yt-link:focus-visible{outline:2px solid var(--gold);outline-offset:3px;}
+  .promo{display:flex;align-items:center;gap:12px;width:100%;margin-top:18px;padding:13px 14px;text-align:left;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);cursor:pointer;font-family:inherit;}
+  .promo svg{width:22px;height:22px;color:var(--gold);flex:0 0 auto;}
+  .promo b{display:block;font-size:14px;}
+  .promo span{font-size:12.5px;color:var(--text-muted);}
   nav.bottom{
     position:sticky;bottom:0;z-index:20;
     background:rgba(18,21,26,0.94);
@@ -802,6 +815,75 @@ const TECHNIQUES = [
 ];
 
 const TECH_BY_ID = Object.fromEntries(TECHNIQUES.map(t => [t.id, t]));
+
+// ---------- Top-level competition matches ----------
+const ATHLETES = {
+  gordon:'Gordon Ryan', craig:'Craig Jones', kade:'Kade Ruotolo', mica:'Mica Galvão',
+  bodoni:'Giancarlo Bodoni', meregali:'Nicholas Meregali', nicky:'Nicky Rodriguez',
+  marcelo:'Marcelo Garcia', women:'Women’s division'
+};
+const KIND_LABEL = { match:'Match', highlights:'Highlights', round:'Full round', breakdown:'Breakdown' };
+const MATCHES = [
+  {id:'gordon-galvao', who:['gordon'], title:'Gordon Ryan vs André Galvão', event:'ADCC 2022 superfight', kind:'match', youtube:'LoPrlq2_oaI',
+   desc:'Ryan against Galvão, a long-reigning ADCC champion, in a 2022 superfight. Ryan finished it with a rear naked choke. Watch how each man fights for grips and position before the back opens.'},
+  {id:'gordon-galvao-hl', who:['gordon'], title:'Gordon Ryan vs André Galvão highlights', event:'ADCC 2022', kind:'highlights', youtube:'9ikatWgGsa8',
+   desc:'The short version of the Galvão superfight. Good for a quick watch before the full match.'},
+  {id:'gordon-pena', who:['gordon'], title:'Gordon Ryan vs Felipe Pena', event:'ADCC 2024 superfight', kind:'match', youtube:'p-S9JWizi0w',
+   desc:'Ryan’s 2024 ADCC superfight against Pena, a strong jiu-jitsu specialist. Watch Ryan’s pace and how he builds toward the finish.'},
+  {id:'gordon-two-sf', who:['gordon'], title:'Gordon Ryan wins two ADCC superfights', event:'ADCC 2024', kind:'highlights', youtube:'F5_Yo8vMTSU',
+   desc:'Highlights of Ryan’s two superfight wins at the 2024 ADCC World Championships.'},
+  {id:'craig-gabi', who:['craig','women'], title:'Craig Jones vs Gabi Garcia', event:'Craig Jones Invitational', kind:'match', youtube:'HID-Xi8hOUw',
+   desc:'Jones submits Garcia in an intergender match at his own event. Watch how he handles the size difference.'},
+  {id:'craig-ebi-heelhook', who:['craig'], title:'Craig Jones heel hook entry', event:'EBI 14 semifinal', kind:'breakdown', youtube:'O7md_leDiMM',
+   desc:'A quick study of Jones’s heel hook entry from the EBI 14 semifinal. Replay it a few times and note how he gets to the leg.'},
+  {id:'kade-mica-final', who:['kade','mica'], title:'Kade Ruotolo vs Mica Galvão', event:'ADCC 2022 · 77 kg final', kind:'match', youtube:'yY4duwp_C24',
+   desc:'Billed as the best match of ADCC 2022. Ruotolo became the youngest ADCC champion in history here. Fast scrambles and constant pressure.'},
+  {id:'kade-jimenez', who:['kade'], title:'Kade Ruotolo vs Roberto Jimenez', event:'ADCC', kind:'match', youtube:'NmAWpJA6aWw',
+   desc:'Ruotolo against Jimenez. Look for how he chains attacks together when the first one is defended.'},
+  {id:'kade-barch', who:['kade'], title:'Kade Ruotolo vs PJ Barch', event:'ADCC 2022', kind:'match', youtube:'Jbvo5K_j5Gk',
+   desc:'Ruotolo against Barch in the 2022 ADCC bracket.'},
+  {id:'mica-adcc24', who:['mica'], title:'Mica Galvão wins his first ADCC title', event:'ADCC 2024 · 77 kg', kind:'highlights', youtube:'idhilyfOIOw',
+   desc:'Highlights of Galvão’s run to the 2024 ADCC 77 kg title.'},
+  {id:'mica-leon', who:['mica'], title:'Mica Galvão vs Dante Leon', event:'ADCC', kind:'match', youtube:'s_E9jRtGMvM',
+   desc:'Galvão against Leon. Watch his takedown entries and how he keeps top position.'},
+  {id:'bodoni-rodriguez', who:['bodoni'], title:'Giancarlo Bodoni vs Jacob Rodriguez', event:'ADCC', kind:'match', youtube:'PPQ0mYyNMiU',
+   desc:'Bodoni against Rodriguez. A good example of heavy top pressure and patient passing.'},
+  {id:'bodoni-round', who:['bodoni'], title:'Giancarlo Bodoni 10-minute round', event:'ADCC', kind:'round', youtube:'IbUFZPwXsiw',
+   desc:'A full ten-minute ADCC round from Bodoni, start to finish.'},
+  {id:'bodoni-adcc24', who:['bodoni'], title:'Bodoni wins back-to-back ADCC titles', event:'ADCC 2024 · 88 kg', kind:'highlights', youtube:'2F83ir_sOGk',
+   desc:'Highlights of Bodoni’s second straight ADCC title in the 88 kg division.'},
+  {id:'bodoni-porfirio', who:['bodoni'], title:'Giancarlo Bodoni vs André Porfírio', event:'ADCC', kind:'match', youtube:'dG1IV4qOm3c',
+   desc:'Bodoni against Porfírio.'},
+  {id:'meregali-pixley', who:['meregali'], title:'Nicholas Meregali vs Michael Pixley', event:'ADCC', kind:'match', youtube:'wczje99MfXI',
+   desc:'Meregali against Pixley. Watch his guard passing and top control.'},
+  {id:'meregali-maciulewicz', who:['meregali'], title:'Nicholas Meregali vs Marcin Maciulewicz', event:'ADCC', kind:'match', youtube:'lCJWF5MaKJw',
+   desc:'Meregali against Maciulewicz.'},
+  {id:'meregali-round', who:['meregali'], title:'Nicholas Meregali 18-minute round', event:'ADCC', kind:'round', youtube:'_3LWMZjdeNE',
+   desc:'A long ADCC round showing Meregali’s relentless pace.'},
+  {id:'nicky-andrew', who:['nicky'], title:'Nicky Rodriguez vs Fellipe Andrew', event:'Craig Jones Invitational · +80 kg final', kind:'match', youtube:'r7UVGU4WvOo',
+   desc:'The +80 kg final at the Craig Jones Invitational. Rodriguez finishes with rear naked chokes.'},
+  {id:'nicky-gimenis', who:['nicky'], title:'Nicky Rodriguez vs Max Gimenis', event:'Craig Jones Invitational', kind:'match', youtube:'GJW9nzevqLU',
+   desc:'Rodriguez against Gimenis at the Craig Jones Invitational.'},
+  {id:'marcelo-renzo', who:['marcelo'], title:'Marcelo Garcia vs Renzo Gracie', event:'ADCC', kind:'match', youtube:'XJJAaDYEKyM',
+   desc:'Two legends meet. A classic for anyone who wants to see old-school ADCC grappling.'},
+  {id:'marcelo-rolles', who:['marcelo'], title:'Marcelo Garcia vs Rolles Gracie', event:'ADCC', kind:'match', youtube:'BicqjepdoEg',
+   desc:'Garcia against Rolles Gracie.'},
+  {id:'marcelo-kron', who:['marcelo'], title:'Marcelo Garcia vs Kron Gracie', event:'ADCC 2009', kind:'match', youtube:'CU06RH35IsM',
+   desc:'Garcia against Kron Gracie in full HD from the 2009 ADCC World Championship.'},
+  {id:'marcelo-roger', who:['marcelo'], title:'Marcelo Garcia vs Roger Gracie', event:'2004', kind:'match', youtube:'iBUTtXubz7g',
+   desc:'Garcia against Roger Gracie in 2004. Two of the all-time greats.'},
+  {id:'adcc-guillotines', who:['marcelo'], title:'21 guillotines from ADCC history', event:'ADCC', kind:'highlights', youtube:'4tOKH0d0kh8',
+   desc:'A compilation of guillotine finishes from ADCC history. Watch for the grips and the set-ups.'},
+  {id:'crevar-levern', who:['women'], title:'Helena Crevar vs Aurélie Le Vern', event:'ADCC', kind:'match', youtube:'KVW9yzKPKRg',
+   desc:'Crevar against Le Vern.'},
+  {id:'adcc24-65kg', who:['women'], title:'The entire 2024 ADCC 65 kg bracket', event:'ADCC 2024 · 65 kg', kind:'highlights', youtube:'-IwhFijvZP8',
+   desc:'A supercut of the whole 2024 ADCC women’s 65 kg bracket.'},
+  {id:'campo-gabi', who:['women'], title:'Amy Campo vs Gabi Garcia', event:'ADCC', kind:'match', youtube:'NFSK8EvGWME',
+   desc:'Campo takes out ADCC veteran Gabi Garcia.'},
+];
+const MATCH_BY_ID = Object.fromEntries(MATCHES.map(m => [m.id, m]));
+function matchNames(m){ return m.who.map(k => ATHLETES[k]).join(' · '); }
+
 const CAT_LABEL = { submission:'Submission', sweep:'Sweep', escape:'Escape', pass:'Pass', takedown:'Takedown' };
 const CAT_CLASS = { submission:'tag-sub', sweep:'tag-sweep', escape:'tag-escape', pass:'tag-pass', takedown:'tag-takedown' };
 
@@ -871,6 +953,7 @@ const ICONS = {
   open:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.5" r="2"/><path d="M12 7.5v5"/><path d="M6 20c2-5 2-8 6-8.5M18 20c-2-5-2-8-6-8.5"/><path d="M6 20l-1.5-2M18 20l1.5-2"/></svg>',
   northsouth:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="18" r="2"/><circle cx="17" cy="6" r="2"/><path d="M9 17l6-10"/></svg>',
   kneebelly:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="18" rx="8" ry="2"/><circle cx="8" cy="10" r="2"/><path d="M8 12v3l4-3.5"/></svg>',
+  trophy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 01-8 0V4z"/><path d="M8 6H5a3 3 0 003 4M16 6h3a3 3 0 01-3 4M12 13v4M8 20h8M10 17h4"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
   circle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/></svg>',
   shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/></svg>',
@@ -886,6 +969,8 @@ function parseHash(){
   if(parts[0] === 'technique' && parts[1]) return { view:'technique', id:parts[1] };
   if(parts[0] === 'search') return { view:'search', q: decodeURIComponent(parts[1]||'') };
   if(parts[0] === 'positions') return { view:'positions' };
+  if(parts[0] === 'matches') return { view:'matches', who: parts[1] || 'all' };
+  if(parts[0] === 'match' && parts[1]) return { view:'match', id:parts[1] };
   return { view:'home' };
 }
 function navigate(hash){ location.hash = hash; }
@@ -902,7 +987,8 @@ let searchQuery = '';
 
 function render(){
   const route = parseHash();
-  const activeTab = route.view === 'positions' ? 'positions' : (route.view === 'search' ? 'search' : 'home');
+  if(route.view !== 'search') searchQuery = '';
+  const activeTab = route.view === 'positions' ? 'positions' : (route.view === 'search' ? 'search' : ((route.view === 'matches' || route.view === 'match') ? 'matches' : 'home'));
   app.innerHTML = `
     <header class="top">
       <div class="brand-row">
@@ -929,6 +1015,9 @@ function render(){
       <button class="${activeTab==='positions'?'active':''}" onclick="navigate('/positions')">
         ${icon('grid')}<span>Positions</span>
       </button>
+      <button class="${activeTab==='matches'?'active':''}" onclick="navigate('/matches')">
+        ${icon('trophy')}<span>Matches</span>
+      </button>
       <button class="${activeTab==='search'?'active':''}" onclick="document.getElementById('search-input').focus()">
         ${icon('find')}<span>Search</span>
       </button>
@@ -951,6 +1040,8 @@ function render(){
   else if(route.view === 'position') main.innerHTML = renderPosition(route.id);
   else if(route.view === 'technique') main.innerHTML = renderTechnique(route.id);
   else if(route.view === 'search') main.innerHTML = renderSearch(route.q);
+  else if(route.view === 'matches') main.innerHTML = renderMatches(route.who);
+  else if(route.view === 'match') main.innerHTML = renderMatch(route.id);
   else main.innerHTML = renderHome();
 
   window.scrollTo(0,0);
@@ -974,6 +1065,7 @@ function renderHome(){
         View all ${POSITIONS.length} positions
       </button>
     </div>
+    <button class="promo" onclick="navigate('/matches')">${icon('trophy')}<div><b>Watch top competitors</b><span>Gordon Ryan, Craig Jones, the Ruotolos and more</span></div></button>
     ${recent.length ? `
       <div class="section-title">Continue watching</div>
       <div class="tech-list">
@@ -1029,10 +1121,11 @@ function renderSearch(q){
     t.category.toLowerCase().includes(query) ||
     t.instructor.toLowerCase().includes(query)
   ) : [];
+  const mres = query ? MATCHES.filter(m => (m.title + ' ' + matchNames(m) + ' ' + m.event).toLowerCase().includes(query)) : [];
   return `
-    <div class="page-sub" style="margin-top:2px;">${results.length} result${results.length===1?'':'s'} for \u201c${escapeHtml(q)}\u201d</div>
+    <div class="page-sub" style="margin-top:2px;">${results.length + mres.length} result${results.length + mres.length===1?'':'s'} for \u201c${escapeHtml(q)}\u201d</div>
     <div class="tech-list">
-      ${results.length ? results.map(techCard).join('') : emptyState('No techniques match that search. Try a position name like \u201cmount\u201d, or a submission like \u201carmbar\u201d.')}
+      ${(results.length || mres.length) ? results.map(techCard).join('') + (mres.length ? '<div class="section-title">Top competitors</div>' + mres.map(matchCard).join('') : '') : emptyState('No techniques match that search. Try a position name like \u201cmount\u201d, or a submission like \u201carmbar\u201d.')}
     </div>
   `;
 }
@@ -1093,6 +1186,65 @@ function techCard(t){
         </div>
       </div>
     </div>
+  `;
+}
+
+
+function renderMatches(who){
+  if(who !== 'all' && !ATHLETES[who]) who = 'all';
+  const list = who === 'all' ? MATCHES : MATCHES.filter(m => m.who.includes(who));
+  const chips = [['all','All']].concat(Object.entries(ATHLETES)).map(([k,label]) =>
+    `<button class="chip ${k===who?'active':''}" aria-pressed="${k===who}" onclick="navigate('/matches/${k}')">${label}</button>`).join('');
+  return `
+    <h2 class="page-title">Top competitors</h2>
+    <div class="page-sub">${list.length} video${list.length===1?'':'s'} from high-level competition</div>
+    <div class="chips" role="group" aria-label="Filter by athlete">${chips}</div>
+    <div class="tech-list">${list.map(matchCard).join('')}</div>
+  `;
+}
+
+function matchCard(m){
+  return `
+    <div class="tech-card" ${navAttrs('/match/'+m.id)}>
+      <div class="tech-thumb">
+        <img loading="lazy" src="https://i.ytimg.com/vi/${m.youtube}/mqdefault.jpg" alt="" onerror="this.style.display='none'"/>
+        <span class="play">${icon('play')}</span>
+      </div>
+      <div class="tech-body">
+        <div class="tech-title">${m.title}</div>
+        <div class="tech-meta">
+          <span class="tag" style="background:var(--surface-2);color:var(--text-muted);">${KIND_LABEL[m.kind]}</span>
+          <span class="tech-pos">${m.event}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMatch(id){
+  const m = MATCH_BY_ID[id];
+  if(!m) return emptyState('Video not found.');
+  const more = MATCHES.filter(x => x.id !== m.id && x.who.some(w => m.who.includes(w))).slice(0,6);
+  return `
+    <div class="back-row" ${navAttrs('/matches')}>${icon('chevronLeft')} Top competitors</div>
+    <div class="video-wrap">
+      <iframe src="https://www.youtube-nocookie.com/embed/${m.youtube}?rel=0&modestbranding=1"
+        title="${escapeAttr(m.title)}" loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen></iframe>
+    </div>
+    <div class="detail-tags">
+      <span class="tag" style="background:var(--surface-2);color:var(--text-muted);">${KIND_LABEL[m.kind]}</span>
+      <span class="tag" style="background:var(--surface-2);color:var(--text-muted);">${m.event}</span>
+    </div>
+    <h2 class="detail-title">${m.title}</h2>
+    <div class="detail-source">${matchNames(m)} · via YouTube</div>
+    <a class="yt-link" href="https://www.youtube.com/watch?v=${m.youtube}" target="_blank" rel="noopener">Video won’t play? Open on YouTube</a>
+    <p class="detail-desc">${m.desc}</p>
+    ${more.length ? `
+      <div class="section-title" style="margin-top:0;">More from these athletes</div>
+      <div class="tech-list">${more.map(matchCard).join('')}</div>
+    ` : ''}
   `;
 }
 
