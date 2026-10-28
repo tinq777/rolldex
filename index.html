@@ -239,7 +239,7 @@
     background:var(--gold);color:#12151A;border:0;border-radius:8px;
     font-weight:700;font-size:13px;padding:7px 14px;cursor:pointer;font-family:inherit;
   }
-  .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none;}
+  .chips{position:relative;display:flex;gap:8px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none;}
   .chips::-webkit-scrollbar{display:none;}
   .chip{flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);
     border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
@@ -1107,8 +1107,12 @@ function navAttrs(path){
 const app = document.getElementById('app');
 let searchQuery = '';
 
+let lastView = null;
+let chipLeft = 0;
 function render(){
   const route = parseHash();
+  const prevView = lastView; lastView = route.view;
+  { const oc = document.querySelector('.chips'); if(oc) chipLeft = oc.scrollLeft; }
   if(route.view !== 'search') searchQuery = '';
   const activeTab = route.view === 'positions' ? 'positions' : (route.view === 'search' ? 'search' : ((route.view === 'matches' || route.view === 'match') ? 'matches' : 'home'));
   app.innerHTML = `
@@ -1166,7 +1170,19 @@ function render(){
   else if(route.view === 'match') main.innerHTML = renderMatch(route.id);
   else main.innerHTML = renderHome();
 
-  window.scrollTo(0,0);
+  if(!(prevView === 'matches' && route.view === 'matches')) window.scrollTo(0,0);
+  // Keep the athlete row where the user left it, and make sure the selected athlete is visible.
+  const chipsEl = document.querySelector('.chips');
+  if(chipsEl){
+    chipsEl.scrollLeft = chipLeft;
+    const act = chipsEl.querySelector('.chip.active');
+    if(act){
+      const l = act.offsetLeft, r = l + act.offsetWidth;
+      if(l < chipsEl.scrollLeft + 8 || r > chipsEl.scrollLeft + chipsEl.clientWidth - 8){
+        chipsEl.scrollLeft = Math.max(0, l - (chipsEl.clientWidth - act.offsetWidth) / 2);
+      }
+    }
+  }
   if(route.view === 'search' && document.activeElement !== input){
     input.focus();
     input.setSelectionRange(input.value.length, input.value.length);
@@ -1312,8 +1328,10 @@ function techCard(t){
 }
 
 
+let lastMatchFilter = 'all';
 function renderMatches(who){
   if(who !== 'all' && !ATHLETES[who]) who = 'all';
+  lastMatchFilter = who;
   const list = who === 'all' ? MATCHES : MATCHES.filter(m => m.who.includes(who));
   const chips = [['all','All']].concat(Object.entries(ATHLETES)).map(([k,label]) =>
     `<button class="chip ${k===who?'active':''}" aria-pressed="${k===who}" onclick="navigate('/matches/${k}')">${label}</button>`).join('');
@@ -1348,7 +1366,7 @@ function renderMatch(id){
   if(!m) return emptyState('Video not found.');
   const more = MATCHES.filter(x => x.id !== m.id && x.who.some(w => m.who.includes(w))).slice(0,6);
   return `
-    <div class="back-row" ${navAttrs('/matches')}>${icon('chevronLeft')} Top competitors</div>
+    <div class="back-row" ${navAttrs('/matches/'+lastMatchFilter)}>${icon('chevronLeft')} ${lastMatchFilter==='all' ? 'Top competitors' : ATHLETES[lastMatchFilter]}</div>
     <div class="video-wrap">
       <iframe src="https://www.youtube-nocookie.com/embed/${m.youtube}?rel=0&modestbranding=1"
         title="${escapeAttr(m.title)}" loading="lazy"
