@@ -1,4 +1,4 @@
-const CACHE = 'rolldex-v9';
+const CACHE = 'rolldex-v10';
 const SHELL = ['./', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 // Hosts like Cloudflare Pages redirect /index.html to /. Browsers (Safari especially)
