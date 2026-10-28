@@ -1,4 +1,4 @@
-const CACHE = 'rolldex-v7';
+const CACHE = 'rolldex-v8';
 const SHELL = [
   './',
   './index.html',
